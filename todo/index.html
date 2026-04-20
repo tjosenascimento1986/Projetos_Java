@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas - ToDo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .task-done { opacity: 0.6; }
+        .task-done h3 { text-decoration: line-through; color: #9ca3af; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <nav class="bg-indigo-700 text-white p-4 shadow-lg mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fas fa-tasks"></i> ToDo System
+            </h1>
+            <div class="text-right">
+                <p id="data-atual" class="text-sm font-light"></p>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+        
+        <div class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 id="formTitle" class="text-xl font-bold text-gray-800">Nova Tarefa</h2>
+                    <i class="fas fa-pen-nib text-indigo-400"></i>
+                </div>
+                
+                <form id="taskForm" class="space-y-4">
+                    <input type="hidden" id="taskId">
+                    
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Título</label>
+                        <input type="text" id="titulo" required placeholder="O que precisa ser feito?"
+                            class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Descrição</label>
+                        <textarea id="descricao" rows="3" placeholder="Detalhes opcionais..."
+                            class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Prioridade</label>
+                            <select id="prioridade" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none">
+                                <option value="BAIXA">Baixa</option>
+                                <option value="MEDIA">Média</option>
+                                <option value="ALTA">Alta</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Categoria</label>
+                            <select id="categoria" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none">
+                                <option value="PESSOAL">Pessoal</option>
+                                <option value="TRABALHO">Trabalho</option>
+                                <option value="COMPRAS">Compras</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="btnSubmit" 
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-200">
+                            Salvar Tarefa
+                        </button>
+                        <button type="button" id="btnCancelar" onclick="resetForm()" 
+                            class="hidden w-full mt-2 text-gray-500 text-sm font-medium hover:text-red-500 transition">
+                            Cancelar Edição
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h2 class="text-2xl font-black text-gray-800 tracking-tight">Gerenciar Listas</h2>
+                <div class="flex bg-white p-1 rounded-lg shadow-sm border border-gray-100">
+                    <button onclick="listarTodas()" class="px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-50 text-gray-600">Todas</button>
+                    <button onclick="listarHoje()" class="px-4 py-2 text-sm font-medium rounded-md bg-indigo-50 text-indigo-700">Hoje</button>
+                </div>
+            </div>
+
+            <div id="listaTarefas" class="space-y-4">
+                <p class="text-center text-gray-400 py-10">Carregando tarefas...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8080/todo";
+        let editandoId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            listarTodas();
+        });
+
+        // --- FUNÇÕES DE API ---
+
+        async function listarTodas() {
+            try {
+                const res = await fetch(`${API_URL}/listartodos`);
+                const tarefas = await res.json();
+                renderizarTarefas(tarefas);
+            } catch (err) { console.error("Erro ao buscar:", err); }
+        }
+
+        async function listarHoje() {
+            try {
+                const res = await fetch(`${API_URL}/listarhoje`);
+                const tarefas = await res.json();
+                renderizarTarefas(tarefas);
+            } catch (err) { console.error("Erro ao buscar hoje:", err); }
+        }
+
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tarefa = {
+                titulo: document.getElementById('titulo').value,
+                descricao: document.getElementById('descricao').value,
+                prioridade: document.getElementById('prioridade').value,
+                categoria: document.getElementById('categoria').value
+            };
+
+            const url = editandoId ? `${API_URL}/${editandoId}` : `${API_URL}/salvartarefa`;
+            const method = editandoId ? 'PUT' : 'POST';
+
+            await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tarefa)
+            });
+
+            resetForm();
+            listarTodas();
+        });
+
+        async function excluir(id) {
+            if(confirm("Deseja apagar esta tarefa permanentemente?")) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                listarTodas();
+            }
+        }
+
+        async function toggleConcluir(id) {
+            await fetch(`${API_URL}/${id}/concluir`, { method: 'PUT' });
+            listarTodas();
+        }
+
+        // --- FUNÇÕES DE INTERFACE ---
+
+        function prepararEdicao(id, titulo, descricao, prioridade, categoria) {
+            editandoId = id;
+            document.getElementById('formTitle').innerText = "Editar Tarefa";
+            document.getElementById('titulo').value = titulo;
+            document.getElementById('descricao').value = descricao;
+            document.getElementById('prioridade').value = prioridade;
+            document.getElementById('categoria').value = categoria;
+            
+            const btn = document.getElementById('btnSubmit');
+            btn.innerText = "Atualizar Alterações";
+            btn.classList.replace('bg-indigo-600', 'bg-orange-500');
+            document.getElementById('btnCancelar').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            editandoId = null;
+            document.getElementById('taskForm').reset();
+            document.getElementById('formTitle').innerText = "Nova Tarefa";
+            const btn = document.getElementById('btnSubmit');
+            btn.innerText = "Salvar Tarefa";
+            btn.classList.replace('bg-orange-500', 'bg-indigo-600');
+            document.getElementById('btnCancelar').classList.add('hidden');
+        }
+
+        function renderizarTarefas(tarefas) {
+            const container = document.getElementById('listaTarefas');
+            container.innerHTML = tarefas.length === 0 
+                ? '<div class="text-center py-10 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">Nenhuma tarefa encontrada.</div>'
+                : '';
+
+            tarefas.forEach(t => {
+                const corPrioridade = {
+                    'ALTA': 'bg-red-100 text-red-600',
+                    'MEDIA': 'bg-yellow-100 text-yellow-600',
+                    'BAIXA': 'bg-green-100 text-green-600'
+                }[t.prioridade];
+
+                const desc = t.descricao || "";
+                const tit = t.titulo;
+
+                container.innerHTML += `
+                    <div class="group bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center transition hover:shadow-md ${t.concluido ? 'task-done' : ''}">
+                        <div class="flex-1 pr-4">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-gray-100 text-gray-500 border border-gray-200">
+                                    ${t.categoria}
+                                </span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${corPrioridade}">
+                                    ${t.prioridade}
+                                </span>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-lg leading-tight">${t.titulo}</h3>
+                            <p class="text-gray-500 text-sm mt-1 line-clamp-2">${t.descricao || 'Sem descrição detalhada.'}</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleConcluir(${t.id})" 
+                                class="w-10 h-10 flex items-center justify-center rounded-full transition ${t.concluido ? 'bg-green-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-green-100 hover:text-green-600'}" title="Concluir">
+                                <i class="fas fa-check text-sm"></i>
+                            </button>
+                            
+                            <button onclick="prepararEdicao(${t.id}, '${tit.replace(/'/g, "\\'")}', '${desc.replace(/'/g, "\\'")}', '${t.prioridade}', '${t.categoria}')" 
+                                class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-blue-100 hover:text-blue-600 transition" title="Editar">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+
+                            <button onclick="excluir(${t.id})" 
+                                class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-red-100 hover:text-red-600 transition" title="Excluir">
+                                <i class="fas fa-trash-alt text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

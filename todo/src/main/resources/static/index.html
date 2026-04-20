@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-50">
+<nav class="bg-indigo-600 text-white shadow-md p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-black tracking-tighter italic">TASK<span class="text-indigo-200">MASTER</span></h1>
+        <div id="relogio" class="text-sm font-mono opacity-80"></div>
+    </div>
+</nav>
+
+<main class="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <aside class="lg:col-span-4">
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 id="formTitle" class="text-lg font-bold text-slate-800 mb-6">Nova Tarefa</h2>
+            <form id="taskForm" class="flex flex-col gap-4">
+                <input type="hidden" id="taskId">
+                <input type="text" id="titulo" placeholder="Título da tarefa" required class="form-input">
+                <textarea id="descricao" placeholder="Descrição (opcional)" class="form-input" rows="3"></textarea>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="prioridade" class="form-input">
+                        <option value="BAIXA">Baixa</option>
+                        <option value="MEDIA">Média</option>
+                        <option value="ALTA">Alta</option>
+                    </select>
+                    <select id="categoria" class="form-input">
+                        <option value="PESSOAL">Pessoal</option>
+                        <option value="TRABALHO">Trabalho</option>
+                        <option value="COMPRAS">Compras</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="btn-primary">Salvar Tarefa</button>
+                <button type="button" id="btnCancelar" onclick="ui.resetForm()" class="hidden text-slate-400 text-xs hover:text-red-500">Cancelar Edição</button>
+            </form>
+        </section>
+    </aside>
+
+    <section class="lg:col-span-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">Minha Lista</h2>
+            <div class="flex gap-2">
+                <button onclick="api.listarTodas()" class="btn-filter">Todas</button>
+                <button onclick="api.listarHoje()" class="btn-filter">Hoje</button>
+            </div>
+        </div>
+        <div id="listaTarefas" class="grid gap-4"></div>
+    </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
